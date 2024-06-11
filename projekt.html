@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Death by drugs</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://d3js.org/topojson.v3.min.js"></script>
+    <style>
+        body {
+            display: flex;
+            font-family: sans-serif;
+            background-color: #FFFAF0;
+        }
+        #sidebar {
+            width: 500px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-right: 1px solid #ddd;
+        }
+        #map-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        select, input {
+            width: 100%;
+            margin-bottom: 20px;
+            padding: 10px;
+        }
+        svg {
+            font: 10px sans-serif;
+        }
+        .tooltip {
+            position: absolute;
+            text-align: center;
+            width: 100px;
+            height: auto;
+            padding: 5px;
+            font: 12px sans-serif;
+            background: lightsteelblue;
+            border: 0px;
+            border-radius: 8px;
+            pointer-events: none;
+        }
+        #chart, #barChart, #minMaxChart {
+            margin-top: 30px;
+            margin-bottom: 30px;
+        }
+        h1 {
+            text-align: center;
+            color: #ff7f0e;
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <h1>Death by Drugs</h1>
+        <select id="drugSelect">
+            <option value="Death: Opioid use disorders">Opioids</option>
+            <option value="Death: Cocaine use disorders">Cocaine</option>
+            <option value="Deaths: Other drug use disorders">Other drugs</option>
+            <option value="Deaths: Amphetamine use disorders">Amphetamine</option>
+        </select>
+        <input type="range" min="2000" max="2019" value="2000" id="yearSlider" step="1">
+        <div id="yearLabel">Year: 2000</div>
+        <div id="minMaxChart"></div>
+        <div id="chart"></div>
+        <div id="barChart"></div>
+    </div>
+    <div id="map-container" style="margin-left: 50px;">
+        <svg width="500" height="500" id="map"></svg> <!-- Promijenjene dimenzije SVG elementa -->
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
