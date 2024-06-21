@@ -29,7 +29,7 @@ d3.json("deathDrug.json").then(data => {
     updateMap(2000);
 }).catch(error => console.error("Error loading deathDrug.json:", error));
 
-// Load world countries data
+
 d3.json("world-countries.json").then(worldData => {
     const countries = worldData.features;
 
@@ -213,8 +213,8 @@ function createLineChart(data, country) {
 }
 
 function createBarChart(data) {
-    const barChartWidth = 400;  // Dimenzija za sidebar
-    const barChartHeight = 200; // Dimenzija za sidebar
+    const barChartWidth = 400; 
+    const barChartHeight = 200; 
 
     const svgBarChart = d3.select("#barChart").append("svg")
         .attr("width", barChartWidth + margin.left + margin.right)
