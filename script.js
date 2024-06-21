@@ -1,5 +1,5 @@
-const width = 960;
-const height = 600;
+const width = 1200;
+const height = 800;
 const margin = { top: 20, right: 30, bottom: 30, left: 40 };
 
 const projection = d3.geoMercator()
@@ -20,6 +20,8 @@ svg.call(zoom);
 
 let deathData;
 let selectedDrug = "Death: Opioid use disorders";
+let intervalId;
+let isPlaying = false;
 
 // Load death data
 d3.json("deathDrug.json").then(data => {
@@ -45,9 +47,26 @@ d3.json("world-countries.json").then(worldData => {
         .attr("transform", d => `translate(${path.centroid(d)})`)
         .attr("dy", ".35em")
         .attr("class", "country-label")
-        .text(d => getCountryName(d))
+        .text("")
         .attr("font-size", "6px")
-        .attr("text-anchor", "middle");
+        .attr("text-anchor", "middle")
+        .style("pointer-events", "none");
+
+    g.selectAll("path")
+        .on("mouseover", function(event, d) {
+            d3.select(this).attr("stroke-width", 2);
+            g.selectAll(".country-label")
+                .filter(l => l.properties.name === d.properties.name)
+                .text(d.properties.name)
+                .style("fill", "gray")
+                .attr("background", "white");
+        })
+        .on("mouseout", function(event, d) {
+            d3.select(this).attr("stroke-width", 1);
+            g.selectAll(".country-label")
+                .filter(l => l.properties.name === d.properties.name)
+                .text("");
+        });
 
     createLegend();
 }).catch(error => console.error("Error loading world-countries.json:", error));
@@ -62,11 +81,23 @@ d3.select("#drugSelect").on("change", function() {
     updateMap(+document.getElementById("yearSlider").value);
 });
 
-// Change drug type
-function changeDrug(drug) {
-    selectedDrug = drug;
-    updateMap(+document.getElementById("yearSlider").value);
-}
+
+const playPauseButton = d3.select("#playPauseButton");
+playPauseButton.on("click", function() {
+    if (isPlaying) {
+        clearInterval(intervalId);
+        playPauseButton.text("Play");
+    } else {
+        intervalId = setInterval(() => {
+            let currentYear = +document.getElementById("yearSlider").value;
+            currentYear = currentYear < 2019 ? currentYear + 1 : 2000;
+            document.getElementById("yearSlider").value = currentYear;
+            updateMap(currentYear);
+        }, 1000);
+        playPauseButton.text("Pause");
+    }
+    isPlaying = !isPlaying;
+});
 
 function getCountryName(d) {
     return d && d.properties && d.properties.name ? d.properties.name : "Unknown";
@@ -86,7 +117,10 @@ function getColor(country, year) {
 
 function updateMap(year) {
     console.log("Updating map for year:", year);
-    d3.selectAll("path").attr("fill", d => getColor(getCountryName(d), year));
+    d3.selectAll("path")
+        .transition()
+        .duration(500)
+        .attr("fill", d => getColor(getCountryName(d), year));
     d3.select("#yearLabel").text(`Year: ${year}`);
     updateMinMaxChart(year);
 }
@@ -103,12 +137,20 @@ function clicked(event, d) {
     createLineChart(countryData, country);
     const minDeath = d3.min(countryData, d => d[selectedDrug]);
     const maxDeath = d3.max(countryData, d => d[selectedDrug]);
-    createBarChart(minDeath, maxDeath, country);
+    const minYear = countryData.find(d => d[selectedDrug] === minDeath).Year;
+    const maxYear = countryData.find(d => d[selectedDrug] === maxDeath).Year;
+    createBarChart([{ year: minYear, death: minDeath }, { year: maxYear, death: maxDeath }]);
 }
 
 function createLineChart(data, country) {
-    const chartWidth = 400 - margin.left - margin.right;
-    const chartHeight = 200 - margin.top - margin.bottom;
+    const chartWidth = 400 ;
+    const chartHeight = 200 ;
+
+    d3.select("#chart").append("div")
+    .attr("class", "country-title")
+    .style("text-align", "center")
+    .style("margin-bottom", "10px")
+    .text(country);
 
     const x = d3.scaleLinear()
         .domain(d3.extent(data, d => d.Year))
@@ -123,58 +165,56 @@ function createLineChart(data, country) {
         .x(d => x(d.Year))
         .y(d => y(d[selectedDrug]));
 
-    const svgChart = d3.select("#chart").append("svg")
+    const svg = d3.select("#chart").append("svg")
         .attr("width", chartWidth + margin.left + margin.right)
         .attr("height", chartHeight + margin.top + margin.bottom)
         .append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    svgChart.append("path")
+    svg.append("g")
+        .attr("transform", `translate(0,${chartHeight})`)
+        .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+
+    svg.append("g")
+        .call(d3.axisLeft(y));
+
+    svg.append("path")
         .datum(data)
         .attr("fill", "none")
         .attr("stroke", "steelblue")
         .attr("stroke-width", 1.5)
-        .attr("d", line);
+        .attr("d", line)
+        .attr("stroke-dasharray", function() { return this.getTotalLength(); })
+        .attr("stroke-dashoffset", function() { return this.getTotalLength(); })
+        .transition()
+        .duration(2000)
+        .attr("stroke-dashoffset", 0);
 
-    svgChart.append("g")
-        .attr("transform", `translate(0,${chartHeight})`)
-        .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+    const tooltip = d3.select("body").append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0);
 
-    svgChart.append("g")
-        .call(d3.axisLeft(y));
-
-    const minDeath = d3.min(data, d => d[selectedDrug]);
-    const maxDeath = d3.max(data, d => d[selectedDrug]);
-
-    svgChart.append("rect")
-        .attr("x", chartWidth / 2)
-        .attr("y", chartHeight / 2)
-        .attr("width", 100)
-        .attr("height", 50)
-        .attr("fill", "white")
-        .attr("stroke", "black");
-
-    svgChart.append("text")
-        .attr("x", chartWidth / 2 + 10)
-        .attr("y", chartHeight / 2 + 20)
-        .text(country);
-
-    svgChart.append("text")
-        .attr("x", chartWidth / 2 + 10)
-        .attr("y", chartHeight / 2 + 35)
-        .text("Max Death: " + maxDeath);
-
-    svgChart.append("text")
-        .attr("x", chartWidth / 2 + 10)
-        .attr("y", chartHeight / 2 + 50)
-        .text("Min Death: " + minDeath);
+    svg.selectAll("circle")
+        .data(data)
+        .enter().append("circle")
+        .attr("cx", d => x(d.Year))
+        .attr("cy", d => y(d[selectedDrug]))
+        .attr("r", 3)
+        .attr("fill", "steelblue")
+        .on("mouseover", function(event, d) {
+            tooltip.transition().duration(200).style("opacity", .9);
+            tooltip.html(`Year: ${d.Year}<br/>Deaths: ${d[selectedDrug]}`)
+                .style("left", (event.pageX + 5) + "px")
+                .style("top", (event.pageY - 28) + "px");
+        })
+        .on("mouseout", function(d) {
+            tooltip.transition().duration(500).style("opacity", 0);
+        });
 }
 
-function createBarChart(minDeath, maxDeath, country) {
-    d3.select("#barChart").html("");
-
-    const barChartWidth = 400 - margin.left - margin.right;
-    const barChartHeight = 200 - margin.top - margin.bottom;
+function createBarChart(data) {
+    const barChartWidth = 400;  // Dimenzija za sidebar
+    const barChartHeight = 200; // Dimenzija za sidebar
 
     const svgBarChart = d3.select("#barChart").append("svg")
         .attr("width", barChartWidth + margin.left + margin.right)
@@ -183,38 +223,51 @@ function createBarChart(minDeath, maxDeath, country) {
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
     const x = d3.scaleBand()
-        .domain(["Min Death", "Max Death"])
+        .domain(data.map(d => d.year))
         .range([0, barChartWidth])
         .padding(0.1);
 
     const y = d3.scaleLinear()
-        .domain([0, d3.max([minDeath, maxDeath])])
-        .nice()
+        .domain([0, d3.max(data, d => d.death)]).nice()
         .range([barChartHeight, 0]);
 
     svgBarChart.append("g")
         .attr("transform", `translate(0,${barChartHeight})`)
         .call(d3.axisBottom(x));
 
-    svgBarChart.append("g").call(d3.axisLeft(y));
+    svgBarChart.append("g")
+        .call(d3.axisLeft(y));
 
     svgBarChart.selectAll(".bar")
-        .data([{ key: "Min Death", value: minDeath }, { key: "Max Death", value: maxDeath }])
+        .data(data)
         .enter().append("rect")
         .attr("class", "bar")
-        .attr("x", d => x(d.key))
-        .attr("y", d => y(d.value))
+        .attr("x", d => x(d.year))
+        .attr("y", barChartHeight) 
         .attr("width", x.bandwidth())
-        .attr("height", d => barChartHeight - y(d.value))
-        .attr("fill", "steelblue");
+        .attr("height", 0)  
+        .attr("fill", "orange")
+        .transition()
+        .duration(2000)
+        .attr("y", d => y(d.death))
+        .attr("height", d => barChartHeight - y(d.death));
 
-    svgBarChart.append("text")
-        .attr("x", barChartWidth / 2)
-        .attr("y", -10)
-        .attr("text-anchor", "middle")
-        .style("font-size", "14px")
-        .text(`Drug-Related Deaths in ${country}`);
+    const tooltip = d3.select("body").append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0);
+
+    svgBarChart.selectAll(".bar")
+        .on("mouseover", function(event, d) {
+            tooltip.transition().duration(200).style("opacity", .9);
+            tooltip.html(`Year: ${d.year}<br/>Deaths: ${d.death}`)
+                .style("left", (event.pageX + 5) + "px")
+                .style("top", (event.pageY - 28) + "px");
+        })
+        .on("mouseout", function(d) {
+            tooltip.transition().duration(500).style("opacity", 0);
+        });
 }
+
 
 function updateMinMaxChart(year) {
     const yearData = deathData.filter(d => d.Year === year && d.Entity !== "World" && !isContinent(d.Entity));
@@ -272,4 +325,3 @@ function createLegend() {
         .style("text-anchor", "start")
         .text("Drug-related Deaths");
 }
-

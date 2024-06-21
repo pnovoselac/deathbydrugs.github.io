@@ -53,6 +53,26 @@
             text-align: center;
             color: #ff7f0e;
         }
+        .country-label {
+            font-size: 10px;
+            fill: rgb(207, 205, 205);
+            pointer-events: none;
+        }
+        #controls {
+            margin-bottom: 20px;
+        }
+        #playPauseButton {
+            width: 100%;
+            padding: 10px;
+            background-color: #e2b843;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #playPauseButton:hover {
+            background-color: #45a049;
+        }
     </style>
 </head>
 <body>
@@ -64,14 +84,17 @@
             <option value="Deaths: Other drug use disorders">Other drugs</option>
             <option value="Deaths: Amphetamine use disorders">Amphetamine</option>
         </select>
-        <input type="range" min="2000" max="2019" value="2000" id="yearSlider" step="1">
-        <div id="yearLabel">Year: 2000</div>
+        <div id="controls">
+            <input type="range" id="yearSlider" min="2000" max="2019" value="2000">
+            <div id="yearLabel">Year: 2000</div>
+            <button id="playPauseButton">Play</button>
+        </div>
         <div id="minMaxChart"></div>
         <div id="chart"></div>
         <div id="barChart"></div>
     </div>
     <div id="map-container" style="margin-left: 50px;">
-        <svg width="500" height="500" id="map"></svg> <!-- Promijenjene dimenzije SVG elementa -->
+        <svg width="500" height="500" id="map"></svg>
     </div>
     <script src="script.js"></script>
 </body>
